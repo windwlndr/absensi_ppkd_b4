@@ -12,7 +12,7 @@ String listTrainingsModelToJson(ListTrainingsModel data) =>
 
 class ListTrainingsModel {
   String? message;
-  List<Datum>? data;
+  List<TrainingModelData>? data;
 
   ListTrainingsModel({this.message, this.data});
 
@@ -21,7 +21,9 @@ class ListTrainingsModel {
         message: json["message"],
         data: json["data"] == null
             ? []
-            : List<Datum>.from(json["data"]!.map((x) => Datum.fromJson(x))),
+            : List<TrainingModelData>.from(
+                json["data"]!.map((x) => TrainingModelData.fromJson(x)),
+              ),
       );
 
   Map<String, dynamic> toJson() => {
@@ -32,14 +34,14 @@ class ListTrainingsModel {
   };
 }
 
-class Datum {
+class TrainingModelData {
   int? id;
   String? title;
 
-  Datum({this.id, this.title});
+  TrainingModelData({this.id, this.title});
 
-  factory Datum.fromJson(Map<String, dynamic> json) =>
-      Datum(id: json["id"], title: json["title"]);
+  factory TrainingModelData.fromJson(Map<String, dynamic> json) =>
+      TrainingModelData(id: json["id"], title: json["title"]);
 
   Map<String, dynamic> toJson() => {"id": id, "title": title};
 }

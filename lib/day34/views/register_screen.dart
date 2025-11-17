@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:absensi_ppkd_b4/day34/models/batch_model.dart';
+import 'package:absensi_ppkd_b4/day34/models/list_trainings.dart';
 import 'package:absensi_ppkd_b4/day34/service/api_service.dart';
 import 'package:absensi_ppkd_b4/day34/views/dashboard_screen.dart';
 import 'package:absensi_ppkd_b4/day34/views/login_screen.dart';
@@ -25,8 +27,8 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController passwordC = TextEditingController();
 
   bool isLoading = false;
-  List trainings = [];
-  List batches = [];
+  List<TrainingModelData> trainings = [];
+  List<BatchModelData> batches = [];
 
   @override
   void initState() {
@@ -45,16 +47,16 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => batches = list);
   }
 
-  // Future<void> pickPhoto() async {
-  //   final picker = ImagePicker();
-  //   final img = await picker.pickImage(source: ImageSource.gallery);
+  Future<void> pickPhoto() async {
+    final picker = ImagePicker();
+    final img = await picker.pickImage(source: ImageSource.camera);
 
-  //   if (img != null) {
-  //     final bytes = await img.readAsBytes();
-  //     base64Photo = "data:image/png;base64,${base64Encode(bytes)}";
-  //     setState(() {});
-  //   }
-  // }
+    if (img != null) {
+      final bytes = await img.readAsBytes();
+      base64Photo = "data:image/png;base64,${base64Encode(bytes)}";
+      setState(() {});
+    }
+  }
 
   Future<void> handleRegister() async {
     if (selectedTrainingId == null || selectedBatchId == null) {
@@ -63,6 +65,7 @@ class _RegisterPageState extends State<RegisterPage> {
       );
       return;
     }
+
     if (base64Photo == null) {
       ScaffoldMessenger.of(
         context,
@@ -77,16 +80,18 @@ class _RegisterPageState extends State<RegisterPage> {
       "email": emailC.text,
       "password": passwordC.text,
       "jenis_kelamin": selectedGender,
-      "profile_photo": base64Photo,
+      "profile_photo": base64Photo ?? "",
       "batch_id": selectedBatchId,
       "training_id": selectedTrainingId,
     };
 
-    final success = await auth.register(data);
+    print("DATA YG DIKIRIM: $data");
+
+    final result = await auth.register(data);
 
     setState(() => isLoading = false);
 
-    if (success) {
+    if (result != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Registrasi berhasil, silakan login")),
       );
@@ -94,6 +99,10 @@ class _RegisterPageState extends State<RegisterPage> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Registrasi gagal, coba lagi")),
       );
     }
   }
@@ -159,43 +168,43 @@ class _RegisterPageState extends State<RegisterPage> {
                       child: Column(
                         children: [
                           // FOTO PROFIL
-                          // GestureDetector(
-                          //   onTap: pickPhoto,
-                          //   child: Column(
-                          //     children: [
-                          //       CircleAvatar(
-                          //         radius: 45,
-                          //         backgroundColor: Colors.grey[300],
-                          //         backgroundImage: base64Photo != null
-                          //             ? MemoryImage(
-                          //                 base64Decode(
-                          //                   base64Photo!.split(",").last,
-                          //                 ),
-                          //               )
-                          //             : null,
-                          //         child: base64Photo == null
-                          //             ? const Icon(
-                          //                 Icons.camera_alt,
-                          //                 size: 35,
-                          //                 color: Colors.black54,
-                          //               )
-                          //             : null,
-                          //       ),
-                          //       const SizedBox(height: 10),
-                          //       Text(
-                          //         base64Photo == null
-                          //             ? "Upload Foto Profil"
-                          //             : "Foto Dipilih ✓",
-                          //         style: TextStyle(
-                          //           color: base64Photo == null
-                          //               ? Colors.black54
-                          //               : Colors.green,
-                          //           fontWeight: FontWeight.w600,
-                          //         ),
-                          //       ),
-                          //     ],
-                          //   ),
-                          // ),
+                          GestureDetector(
+                            onTap: pickPhoto,
+                            child: Column(
+                              children: [
+                                CircleAvatar(
+                                  radius: 45,
+                                  backgroundColor: Colors.grey[300],
+                                  backgroundImage: base64Photo != null
+                                      ? MemoryImage(
+                                          base64Decode(
+                                            base64Photo!.split(",").last,
+                                          ),
+                                        )
+                                      : null,
+                                  child: base64Photo == null
+                                      ? const Icon(
+                                          Icons.camera_alt,
+                                          size: 35,
+                                          color: Colors.black54,
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  base64Photo == null
+                                      ? "Upload Foto Profil"
+                                      : "Foto Dipilih ✓",
+                                  style: TextStyle(
+                                    color: base64Photo == null
+                                        ? Colors.black54
+                                        : Colors.green,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           const SizedBox(height: 18),
 
                           // NAMA
@@ -266,42 +275,6 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                           const SizedBox(height: 18),
 
-                          // // UPLOAD PHOTO
-                          // GestureDetector(
-                          //   onTap: pickPhoto,
-                          //   child: Container(
-                          //     padding: const EdgeInsets.symmetric(
-                          //       horizontal: 14,
-                          //     ),
-                          //     height: 52,
-                          //     decoration: BoxDecoration(
-                          //       color: Colors.grey[100],
-                          //       borderRadius: BorderRadius.circular(10),
-                          //     ),
-                          //     child: Row(
-                          //       children: [
-                          //         const Icon(
-                          //           Icons.camera_alt,
-                          //           color: Colors.grey,
-                          //         ),
-                          //         const SizedBox(width: 10),
-                          //         Text(
-                          //           base64Photo == null
-                          //               ? "Upload Foto Profil"
-                          //               : "Foto Dipilih ✓",
-                          //           style: TextStyle(
-                          //             color: base64Photo == null
-                          //                 ? Colors.grey
-                          //                 : Colors.green,
-                          //             fontWeight: FontWeight.w600,
-                          //           ),
-                          //         ),
-                          //       ],
-                          //     ),
-                          //   ),
-                          // ),
-                          // const SizedBox(height: 18),
-
                           // SELECT TRAINING
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -323,20 +296,14 @@ class _RegisterPageState extends State<RegisterPage> {
                                   value: selectedTrainingId,
                                   hint: const Text("Pilih pelatihan"),
                                   isExpanded: true,
-                                  items: trainings.map<DropdownMenuItem<int>>((
-                                    t,
-                                  ) {
+                                  items: trainings.map((t) {
                                     return DropdownMenuItem<int>(
-                                      value: t["id"] as int,
-                                      child: Text(t["title"]),
+                                      value: t.id,
+                                      child: Text(t.title ?? ""),
                                     );
                                   }).toList(),
                                   onChanged: (value) {
-                                    setState(() {
-                                      selectedTrainingId = int.tryParse(
-                                        value.toString(),
-                                      );
-                                    });
+                                    setState(() => selectedTrainingId = value);
                                   },
                                 ),
                               ),
@@ -365,18 +332,14 @@ class _RegisterPageState extends State<RegisterPage> {
                                   value: selectedBatchId,
                                   hint: const Text("Pilih batch"),
                                   isExpanded: true,
-                                  items: batches.map<DropdownMenuItem<int>>((
-                                    b,
-                                  ) {
+                                  items: batches.map((b) {
                                     return DropdownMenuItem<int>(
-                                      value: b["id"] as int,
-                                      child: Text("Batch ${b["batch_ke"]}"),
+                                      value: b.id,
+                                      child: Text("Batch ${b.batchKe}"),
                                     );
                                   }).toList(),
                                   onChanged: (value) {
-                                    setState(() {
-                                      selectedBatchId = value;
-                                    });
+                                    setState(() => selectedBatchId = value);
                                   },
                                 ),
                               ),
