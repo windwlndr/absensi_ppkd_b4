@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:absensi_ppkd_b4/day34/models/batch_model.dart';
 import 'package:absensi_ppkd_b4/day34/models/list_trainings.dart';
+import 'package:absensi_ppkd_b4/day34/models/login_model.dart';
 import 'package:absensi_ppkd_b4/day34/models/register_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -66,7 +67,6 @@ class AuthAPI {
     return [];
   }
 
-  // LOGIN
   Future<bool> login(String email, String password) async {
     final url = Uri.parse('$baseUrl/login');
 
@@ -84,17 +84,27 @@ class AuthAPI {
       print("LOGIN BODY: ${response.body}");
 
       if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
+        // PARSE JSON MENGGUNAKAN MODEL LOGIN
+        final loginModel = loginModelFromJson(response.body);
 
-        final token = decoded["data"]?["token"] ?? decoded["token"];
+        final token = loginModel.data?.token;
+        final user = loginModel.data?.user;
 
-        if (token == null) {
-          print("TOKEN NOT FOUND");
+        if (token == null || user == null) {
+          print("TOKEN ATAU USER TIDAK ADA");
           return false;
         }
 
+        // SIMPAN KE SHARED PREFERENCES
         final prefs = await SharedPreferences.getInstance();
+
         await prefs.setString("token", token);
+        await prefs.setInt("user_id", user.id ?? 0);
+        await prefs.setString("name", user.name ?? "");
+        await prefs.setString("email", user.email ?? "");
+        await prefs.setBool("isLogin", true);
+
+        print("LOGIN BERHASIL & DATA DISIMPAN");
         return true;
       }
 
@@ -103,5 +113,120 @@ class AuthAPI {
       print("LOGIN ERROR: $e");
       return false;
     }
+  }
+
+  // LOGIN
+  // Future<bool> login(String email, String password) async {
+  //   final url = Uri.parse('$baseUrl/login');
+
+  //   try {
+  //     final response = await http.post(
+  //       url,
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         "Accept": "application/json",
+  //       },
+  //       body: jsonEncode({"email": email, "password": password}),
+  //     );
+
+  //     print("LOGIN STATUS: ${response.statusCode}");
+  //     print("LOGIN BODY: ${response.body}");
+
+  //     if (response.statusCode == 200) {
+  //       final decoded = jsonDecode(response.body);
+
+  //       final token = decoded["data"]?["token"] ?? decoded["token"];
+
+  //       if (token == null) {
+  //         print("TOKEN NOT FOUND");
+  //         return false;
+  //       }
+
+  //       final prefs = await SharedPreferences.getInstance();
+  //       await prefs.setString("token", token);
+  //       return true;
+  //     }
+
+  //     return false;
+  //   } catch (e) {
+  //     print("LOGIN ERROR: $e");
+  //     return false;
+  //   }
+  // }
+
+  // ABSEN CHECK IN
+  Future<bool> absenCheckIn({
+    required String attendanceDate,
+    required String checkIn,
+    required double lat,
+    required double lng,
+    required String address,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+    if (token == null) return false;
+
+    final url = Uri.parse("$baseUrl/absen-check-in");
+    final body = {
+      "attendance_date": attendanceDate,
+      "check_in": checkIn,
+      "check_in_lat": lat,
+      "check_in_lng": lng,
+      "check_in_address": address,
+      "status": "masuk",
+    };
+
+    final res = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("CHECK IN: ${res.statusCode}");
+    print("CHECK IN BODY: ${res.body}");
+
+    return res.statusCode == 200 || res.statusCode == 201;
+  }
+
+  // ABSEN CHECK OUT
+  Future<bool> absenCheckOut({
+    required String attendanceDate,
+    required String checkOut,
+    required double lat,
+    required double lng,
+    required String address,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+    if (token == null) return false;
+
+    final url = Uri.parse("$baseUrl/absen-check-out");
+    final body = {
+      "attendance_date": attendanceDate,
+      "check_out": checkOut,
+      "check_out_lat": lat,
+      "check_out_lng": lng,
+      "check_out_address": address,
+      "check_out_location": "$lat, $lng",
+    };
+
+    final res = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("CHECK OUT: ${res.statusCode}");
+    print("CHECK OUT BODY: ${res.body}");
+
+    return res.statusCode == 200 || res.statusCode == 201;
   }
 }

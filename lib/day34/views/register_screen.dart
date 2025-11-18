@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:absensi_ppkd_b4/day34/models/batch_model.dart';
 import 'package:absensi_ppkd_b4/day34/models/list_trainings.dart';
 import 'package:absensi_ppkd_b4/day34/service/api_service.dart';
-import 'package:absensi_ppkd_b4/day34/views/dashboard_screen.dart';
 import 'package:absensi_ppkd_b4/day34/views/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
