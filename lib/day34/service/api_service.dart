@@ -1,8 +1,14 @@
 import 'dart:convert';
+import 'dart:developer';
+import 'dart:io';
 import 'package:absensi_ppkd_b4/day34/models/batch_model.dart';
+import 'package:absensi_ppkd_b4/day34/models/history_model.dart';
 import 'package:absensi_ppkd_b4/day34/models/list_trainings.dart';
 import 'package:absensi_ppkd_b4/day34/models/login_model.dart';
+import 'package:absensi_ppkd_b4/day34/models/profile_model.dart';
 import 'package:absensi_ppkd_b4/day34/models/register_model.dart';
+import 'package:absensi_ppkd_b4/day34/models/user_model.dart';
+import 'package:absensi_ppkd_b4/day34/preferences/preference_handler.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -115,45 +121,6 @@ class AuthAPI {
     }
   }
 
-  // LOGIN
-  // Future<bool> login(String email, String password) async {
-  //   final url = Uri.parse('$baseUrl/login');
-
-  //   try {
-  //     final response = await http.post(
-  //       url,
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //         "Accept": "application/json",
-  //       },
-  //       body: jsonEncode({"email": email, "password": password}),
-  //     );
-
-  //     print("LOGIN STATUS: ${response.statusCode}");
-  //     print("LOGIN BODY: ${response.body}");
-
-  //     if (response.statusCode == 200) {
-  //       final decoded = jsonDecode(response.body);
-
-  //       final token = decoded["data"]?["token"] ?? decoded["token"];
-
-  //       if (token == null) {
-  //         print("TOKEN NOT FOUND");
-  //         return false;
-  //       }
-
-  //       final prefs = await SharedPreferences.getInstance();
-  //       await prefs.setString("token", token);
-  //       return true;
-  //     }
-
-  //     return false;
-  //   } catch (e) {
-  //     print("LOGIN ERROR: $e");
-  //     return false;
-  //   }
-  // }
-
   // ABSEN CHECK IN
   Future<bool> absenCheckIn({
     required String attendanceDate,
@@ -166,7 +133,7 @@ class AuthAPI {
     final token = prefs.getString("token");
     if (token == null) return false;
 
-    final url = Uri.parse("$baseUrl/absen-check-in");
+    final url = Uri.parse("$baseUrl/absen/check-in");
     final body = {
       "attendance_date": attendanceDate,
       "check_in": checkIn,
@@ -204,7 +171,7 @@ class AuthAPI {
     final token = prefs.getString("token");
     if (token == null) return false;
 
-    final url = Uri.parse("$baseUrl/absen-check-out");
+    final url = Uri.parse("$baseUrl/absen/check-out");
     final body = {
       "attendance_date": attendanceDate,
       "check_out": checkOut,
@@ -228,5 +195,140 @@ class AuthAPI {
     print("CHECK OUT BODY: ${res.body}");
 
     return res.statusCode == 200 || res.statusCode == 201;
+  }
+
+  Future<List<RiwayatAbsenModel>> getRiwayatAbsen(int days) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token") ?? "";
+
+    final url = Uri.parse("$baseUrl/absen/history");
+
+    final response = await http.get(
+      url,
+      headers: {"Authorization": "Bearer $token", "Accept": "application/json"},
+    );
+
+    if (response.statusCode == 200) {
+      final List list = jsonDecode(response.body)["data"];
+      return list.map((e) => RiwayatAbsenModel.fromJson(e)).toList();
+    }
+
+    return [];
+  }
+
+  //Get Token
+  // static Future<String?> _getToken() async {
+  //   final pref = await SharedPreferences.getInstance();
+  //   return pref.getString("token");
+  // }
+
+  //Get Profil
+  Future<ProfileModel> getProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    final url = Uri.parse("$baseUrl/profile");
+
+    final response = await http.get(
+      url,
+      headers: {"Authorization": "Bearer $token", "Accept": "application/json"},
+    );
+    log(response.body);
+    if (response.statusCode == 200) {
+      final jsonBody = jsonDecode(response.body);
+      print(jsonBody);
+      return ProfileModel.fromJson(jsonBody);
+    } else {
+      throw Exception("Gagal mengambil profil");
+    }
+  }
+
+  // Future<UserModel> getProfile() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final token = prefs.getString("token");
+
+  //   if (token == null) {
+  //     throw Exception('Token tidak ditemukan. Silakan login kembali.');
+  //   }
+
+  //   final url = Uri.parse("$baseUrl/profile");
+
+  //   final response = await http.get(
+  //     url,
+  //     headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
+  //   );
+
+  //   log('Get Profile Response: ${response.body}');
+  //   log('Get Profile Status Code: ${response.statusCode}');
+
+  //   final responseBody = json.decode(response.body);
+
+  //   if (response.statusCode == 200) {
+  //     return UserModel.fromJson(responseBody);
+  //   } else if (response.statusCode == 401) {
+  //     throw Exception(
+  //       responseBody['message'] ?? 'Sesi berakhir. Silakan login kembali.',
+  //     );
+  //   } else {
+  //     throw Exception(
+  //       responseBody['message'] ?? 'Gagal mengambil data profil.',
+  //     );
+  //   }
+  // }
+
+  Future<bool> updateProfile({required String name}) async {
+    final token = await SharedPrefHandler.getToken();
+    if (token == null) {
+      throw Exception('Token tidak ditemukan. Silakan login kembali.');
+    }
+
+    final url = Uri.parse("$baseUrl/profile");
+
+    final response = await http.put(
+      url,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({'name': name}),
+    );
+
+    log('Update Profile Response: ${response.body}');
+    log('Update Profile Status Code: ${response.statusCode}');
+
+    final responseBody = json.decode(response.body);
+
+    if (response.statusCode == 200) {
+      return true;
+    } else if (response.statusCode == 422) {
+      // Gagal validasi, misal: nama kosong
+      final errors = responseBody['errors'] as Map<String, dynamic>;
+      final firstError = errors.values.first[0];
+      throw Exception(firstError);
+    } else if (response.statusCode == 401) {
+      throw Exception(
+        responseBody['message'] ?? 'Sesi berakhir. Login kembali.',
+      );
+    } else {
+      throw Exception(responseBody['message'] ?? 'Gagal memperbarui profil.');
+    }
+  }
+
+  //Update Foto Profil
+  Future<bool> updateProfilePhoto(File file) async {
+    final token = await SharedPrefHandler.getToken();
+
+    final url = Uri.parse("$baseUrl/profile/photo");
+
+    var request = http.MultipartRequest("POST", url);
+    request.headers["Authorization"] = "Bearer $token";
+
+    request.files.add(
+      await http.MultipartFile.fromPath("profile_photo", file.path),
+    );
+
+    final response = await request.send();
+    return response.statusCode == 200;
   }
 }

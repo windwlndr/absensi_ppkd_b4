@@ -1,3 +1,5 @@
+import 'package:absensi_ppkd_b4/day34/views/dashboard_screen.dart';
+import 'package:absensi_ppkd_b4/day34/views/login_screen.dart';
 import 'package:absensi_ppkd_b4/day34/views/register_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -35,7 +37,7 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: RegisterPage(),
+      home: LoginPage(),
     );
   }
 }
