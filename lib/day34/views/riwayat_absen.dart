@@ -11,40 +11,44 @@ class RiwayatAbsenPage extends StatefulWidget {
 }
 
 class _RiwayatAbsenPageState extends State<RiwayatAbsenPage> {
-  late Future<List<RiwayatAbsenModel>> last7Days;
-  late Future<List<RiwayatAbsenModel>> last30Days;
+  late Future<List<RiwayatAbsenModel>> riwayatHadir;
 
   @override
   void initState() {
     super.initState();
-    last7Days = AuthAPI().getRiwayatAbsen(7);
-    last30Days = AuthAPI().getRiwayatAbsen(30);
+
+    // Ambil riwayat hadir, bisa kamu ubah ke 7 / 30 Hari sesuai kebutuhan
+    riwayatHadir = AuthAPI().getRiwayatAbsen(30);
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text("Riwayat Absensi"),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: "7 Hari"),
-              Tab(text: "30 Hari"),
+    return Column(
+      children: [
+        /// TAB BAR
+        const TabBar(
+          labelColor: Colors.deepPurple,
+          unselectedLabelColor: Colors.grey,
+          tabs: [
+            Tab(text: "Hadir"),
+            Tab(text: "Izin"),
+          ],
+        ),
+
+        /// TAB VIEW
+        Expanded(
+          child: TabBarView(
+            children: [
+              _buildRiwayatList(riwayatHadir), // Tab Hadir
+              _buildEmptyTab("Belum ada data izin"), // Tab Izin
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            _buildRiwayatList(last7Days),
-            _buildRiwayatList(last30Days),
-          ],
-        ),
-      ),
+      ],
     );
   }
 
+  /// TAB RIWAYAT HADIR
   Widget _buildRiwayatList(Future<List<RiwayatAbsenModel>> future) {
     return FutureBuilder(
       future: future,
@@ -54,7 +58,7 @@ class _RiwayatAbsenPageState extends State<RiwayatAbsenPage> {
         }
 
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return _emptyView();
+          return _buildEmptyTab("Belum ada riwayat kehadiran");
         }
 
         final data = snapshot.data!;
@@ -70,19 +74,21 @@ class _RiwayatAbsenPageState extends State<RiwayatAbsenPage> {
     );
   }
 
-  Widget _emptyView() {
+  /// EMPTY PLACEHOLDER
+  Widget _buildEmptyTab(String message) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(Icons.history_toggle_off, size: 70, color: Colors.grey),
-          SizedBox(height: 8),
-          Text("Belum ada riwayat absensi."),
+        children: [
+          const Icon(Icons.history_toggle_off, size: 60, color: Colors.grey),
+          const SizedBox(height: 8),
+          Text(message, style: const TextStyle(color: Colors.grey)),
         ],
       ),
     );
   }
 
+  /// CARD ITEM RIWAYAT
   Widget _itemTile(RiwayatAbsenModel item) {
     final tanggal = DateFormat(
       'EEEE, dd MMMM yyyy',
@@ -102,16 +108,13 @@ class _RiwayatAbsenPageState extends State<RiwayatAbsenPage> {
               tanggal,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-
             const SizedBox(height: 6),
 
-            // Check In
             _rowInfo("Check In", item.checkInTime ?? "-"),
             _rowInfo("Lokasi In", item.checkInAddress ?? "-"),
 
             const SizedBox(height: 6),
 
-            // Check Out
             _rowInfo("Check Out", item.checkOutTime ?? "-"),
             _rowInfo("Lokasi Out", item.checkOutAddress ?? "-"),
 

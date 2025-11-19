@@ -197,6 +197,42 @@ class AuthAPI {
     return res.statusCode == 200 || res.statusCode == 201;
   }
 
+  Future<bool> submitIzin({
+    required String date,
+    required String time,
+    required String alasan,
+  }) async {
+    final url = Uri.parse("$baseUrl/izin");
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    final response = await http.post(
+      url,
+      headers: {"Authorization": "Bearer $token", "Accept": "application/json"},
+      body: {"attendance_date": date, "time": time, "alasan": alasan},
+    );
+
+    return response.statusCode == 200;
+  }
+
+  // Future<bool> ajukanIzin({
+  //   required String tanggal,
+  //   required String alasan,
+  // }) async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final token = prefs.getString("token");
+  //   final url = Uri.parse("$baseUrl/izin");
+
+  //   final response = await http.post(
+  //     url,
+  //     headers: {"Authorization": "Bearer $token"},
+  //     body: {"tanggal": tanggal, "alasan": alasan},
+  //   );
+
+  //   return response.statusCode == 200;
+  // }
+
   Future<List<RiwayatAbsenModel>> getRiwayatAbsen(int days) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token") ?? "";
@@ -215,12 +251,6 @@ class AuthAPI {
 
     return [];
   }
-
-  //Get Token
-  // static Future<String?> _getToken() async {
-  //   final pref = await SharedPreferences.getInstance();
-  //   return pref.getString("token");
-  // }
 
   //Get Profil
   Future<ProfileModel> getProfile() async {
@@ -243,75 +273,33 @@ class AuthAPI {
     }
   }
 
-  // Future<UserModel> getProfile() async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   final token = prefs.getString("token");
-
-  //   if (token == null) {
-  //     throw Exception('Token tidak ditemukan. Silakan login kembali.');
-  //   }
-
-  //   final url = Uri.parse("$baseUrl/profile");
-
-  //   final response = await http.get(
-  //     url,
-  //     headers: {'Accept': 'application/json', 'Authorization': 'Bearer $token'},
-  //   );
-
-  //   log('Get Profile Response: ${response.body}');
-  //   log('Get Profile Status Code: ${response.statusCode}');
-
-  //   final responseBody = json.decode(response.body);
-
-  //   if (response.statusCode == 200) {
-  //     return UserModel.fromJson(responseBody);
-  //   } else if (response.statusCode == 401) {
-  //     throw Exception(
-  //       responseBody['message'] ?? 'Sesi berakhir. Silakan login kembali.',
-  //     );
-  //   } else {
-  //     throw Exception(
-  //       responseBody['message'] ?? 'Gagal mengambil data profil.',
-  //     );
-  //   }
-  // }
-
   Future<bool> updateProfile({required String name}) async {
-    final token = await SharedPrefHandler.getToken();
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
     if (token == null) {
-      throw Exception('Token tidak ditemukan. Silakan login kembali.');
+      throw Exception("Token tidak ditemukan. Silakan login kembali.");
     }
 
-    final url = Uri.parse("$baseUrl/profile");
+    final url = Uri.parse('$baseUrl/profile');
 
     final response = await http.put(
       url,
       headers: {
         'Accept': 'application/json',
-        'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
       },
-      body: json.encode({'name': name}),
+      body: json.encode({"name": name}),
     );
 
-    log('Update Profile Response: ${response.body}');
-    log('Update Profile Status Code: ${response.statusCode}');
-
-    final responseBody = json.decode(response.body);
+    print("Update Profile Status: ${response.statusCode}");
+    print("Update Profile Body: ${response.body}");
 
     if (response.statusCode == 200) {
       return true;
-    } else if (response.statusCode == 422) {
-      // Gagal validasi, misal: nama kosong
-      final errors = responseBody['errors'] as Map<String, dynamic>;
-      final firstError = errors.values.first[0];
-      throw Exception(firstError);
-    } else if (response.statusCode == 401) {
-      throw Exception(
-        responseBody['message'] ?? 'Sesi berakhir. Login kembali.',
-      );
     } else {
-      throw Exception(responseBody['message'] ?? 'Gagal memperbarui profil.');
+      throw Exception("Gagal update profile");
     }
   }
 

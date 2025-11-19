@@ -29,6 +29,9 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
   String? checkOutTime;
   LatLng? currentPosition;
   String? currentAddress = "Mendeteksi lokasi...";
+  bool isIzin = false;
+  String? izinTime;
+  String? izinAlasan;
 
   String today = DateFormat(
     "EEEE, dd MMMM yyyy",
@@ -42,6 +45,7 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
     _initLocation();
     startRealtimeLocation();
     loadCheckHistory();
+    loadIzinStatus();
   }
 
   @override
@@ -63,9 +67,7 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
     setState(() {});
   }
 
-  // ==============================================
   // GPS LOCATION
-  // ==============================================
   Future<void> _initLocation() async {
     bool enabled = await Geolocator.isLocationServiceEnabled();
     if (!enabled) return;
@@ -122,9 +124,7 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
   String formatDate(DateTime date) =>
       DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(date);
 
-  // ============================
-  // ADDRESS GETTER
-  // ============================
+  //GET ADDRESS
   Future<String> getAddress(double lat, double lng) async {
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
@@ -135,10 +135,14 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
     }
   }
 
-  // ============================
   // CHECK IN
-  // ============================
   Future<void> handleCheckIn() async {
+    if (isIzin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Tidak bisa Check In karena sedang izin")),
+      );
+      return;
+    }
     if (currentLatLng == null) return;
 
     final now = DateTime.now();
@@ -172,10 +176,23 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
     );
   }
 
-  // ============================
   // CHECK OUT
-  // ============================
   Future<void> handleCheckOut() async {
+    if (isIzin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Tidak bisa Check Out karena sedang izin"),
+        ),
+      );
+      return;
+    }
+
+    if (checkInTime == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Anda belum Check In")));
+      return;
+    }
     if (currentLatLng == null) return;
 
     final now = DateTime.now();
@@ -209,9 +226,122 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
     );
   }
 
-  // =====================================
+  //STATUS IZIN
+  Future<void> loadIzinStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    isIzin = prefs.getBool("status") ?? false;
+    setState(() {});
+  }
+
+  Future<void> showIzinDialog() async {
+    final alasanController = TextEditingController();
+
+    // Stream real-time untuk jam & tanggal
+    Stream<DateTime> timeStream = Stream.periodic(
+      const Duration(seconds: 1),
+      (_) => DateTime.now(),
+    );
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StreamBuilder<DateTime>(
+          stream: timeStream,
+          builder: (context, snapshot) {
+            final now = snapshot.data ?? DateTime.now();
+            final dateStr = DateFormat("yyyy-MM-dd").format(now);
+            final timeStr = DateFormat("HH:mm:ss").format(now);
+
+            return AlertDialog(
+              title: const Text("Form Izin"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Real-time tanggal
+                  TextField(
+                    enabled: false,
+                    decoration: InputDecoration(
+                      labelText: "Tanggal",
+                      hintText: dateStr,
+                    ),
+                  ),
+
+                  // Real-time waktu
+                  TextField(
+                    enabled: false,
+                    decoration: InputDecoration(
+                      labelText: "Jam",
+                      hintText: timeStr,
+                    ),
+                  ),
+
+                  // Input alasan
+                  TextField(
+                    controller: alasanController,
+                    decoration: const InputDecoration(labelText: "Alasan Izin"),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  child: const Text("Batal"),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                ElevatedButton(
+                  child: const Text("Kirim"),
+                  onPressed: () async {
+                    final alasan = alasanController.text.trim();
+
+                    if (alasan.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Alasan izin wajib diisi"),
+                        ),
+                      );
+                      return;
+                    }
+
+                    Navigator.pop(context);
+
+                    final success = await api.submitIzin(
+                      date: dateStr,
+                      time: timeStr,
+                      alasan: alasan,
+                    );
+
+                    if (success) {
+                      final prefs = await SharedPreferences.getInstance();
+                      prefs.setBool("status", true);
+                      prefs.setString("izin_time", timeStr);
+                      prefs.setString("izin_alasan", alasan);
+
+                      setState(() {
+                        isIzin = true;
+                        izinTime = timeStr;
+                        izinAlasan = alasan;
+                      });
+                    }
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          success
+                              ? "Izin berhasil diajukan"
+                              : "Gagal mengajukan izin",
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   // DASHBOARD PAGE UI
-  // =====================================
   Widget dashboardContent() {
     return SingleChildScrollView(
       child: Padding(
@@ -226,9 +356,7 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
             Text(today, style: const TextStyle(color: Colors.black54)),
             const SizedBox(height: 20),
 
-            // ============================
             // GOOGLE MAPS REALTIME
-            // ============================
             SizedBox(
               height: 300,
               child: currentLatLng == null
@@ -267,30 +395,86 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
 
             const SizedBox(height: 20),
 
-            // ============================
-            // CHECK IN / OUT INFORMATION
-            // ============================
-            Card(
-              child: ListTile(
-                title: const Text("Check In"),
-                subtitle: Text(checkInTime ?? "-"),
-                trailing: ElevatedButton(
-                  onPressed: handleCheckIn,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+            // CHECK IN / OUT BUTTON
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: isIzin || checkInTime != null
+                        ? null
+                        : handleCheckIn,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text("Masuk"),
                   ),
-                  child: const Text("Masuk"),
                 ),
-              ),
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed:
+                        isIzin || checkInTime == null || checkOutTime != null
+                        ? null
+                        : handleCheckOut,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text("Pulang"),
+                  ),
+                ),
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: isIzin ? null : showIzinDialog,
+
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text("Izin"),
+                  ),
+                ),
+              ],
             ),
+
+            //RIWAYAT ABSEN HARI INI
+            const SizedBox(height: 10),
             Card(
-              child: ListTile(
-                title: const Text("Check Out"),
-                subtitle: Text(checkOutTime ?? "-"),
-                trailing: ElevatedButton(
-                  onPressed: handleCheckOut,
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                  child: const Text("Pulang"),
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _rowInfo("Tanggal", today),
+                    const SizedBox(height: 8),
+                    _rowInfo("Check In", checkInTime ?? "-"),
+                    _rowInfo("Check Out", checkOutTime ?? "-"),
+                    const SizedBox(height: 8),
+
+                    if (isIzin) ...[
+                      const SizedBox(height: 8),
+                      const Divider(),
+                      Text(
+                        "Status: Izin",
+                        style: const TextStyle(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      _rowInfo("Jam Izin", izinTime ?? "-"),
+                      _rowInfo("Alasan", izinAlasan ?? "-"),
+                    ],
+                  ],
                 ),
               ),
             ),
@@ -327,6 +511,18 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
 
   // NAVIGATION
   int currentIndex = 0;
+  String getAppBarTitle() {
+    switch (currentIndex) {
+      case 0:
+        return "Absensi PPKD B4"; // Dashboard
+      case 1:
+        return "Riwayat Absensi";
+      case 2:
+        return "Profil";
+      default:
+        return "Absensi PPKD B4";
+    }
+  }
 
   Widget getSelectedPage() {
     if (currentIndex == 1) return const RiwayatAbsenPage();
@@ -339,18 +535,23 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text(
-          "Absensi PPKD B4",
-          style: TextStyle(color: Colors.white),
+        title: Text(
+          getAppBarTitle(),
+          style: const TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.deepPurple,
       ),
-      body: getSelectedPage(),
+      body: DefaultTabController(length: 2, child: getSelectedPage()),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex,
         selectedItemColor: Colors.deepPurple,
         unselectedItemColor: Colors.black54,
-        onTap: (i) => setState(() => currentIndex = i),
+        onTap: (i) {
+          setState(() => currentIndex = i);
+
+          // refresh nama di dashboard
+          if (i == 0) loadUser();
+        },
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
@@ -360,6 +561,15 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profil"),
         ],
       ),
+    );
+  }
+
+  Widget _rowInfo(String title, String value) {
+    return Row(
+      children: [
+        SizedBox(width: 90, child: Text("$title:")),
+        Expanded(child: Text(value)),
+      ],
     );
   }
 }

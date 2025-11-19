@@ -3,6 +3,7 @@ import 'package:absensi_ppkd_b4/day34/models/profile_model.dart';
 import 'package:absensi_ppkd_b4/day34/service/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/user_model.dart';
 
@@ -26,41 +27,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _editName(ProfileData user) async {
     final controller = TextEditingController(text: user.name);
 
-    final result = await showDialog(
+    final result = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Edit Nama"),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: "Nama Baru",
-            border: OutlineInputBorder(),
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Edit Profile"),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: "Nama Baru",
+              border: OutlineInputBorder(),
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Batal"),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Simpan"),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("Batal"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text("Simpan"),
+            ),
+          ],
+        );
+      },
     );
 
     if (result == true) {
-      final success = await authApi.updateProfile(name: controller.text.trim());
+      final newName = controller.text.trim();
 
-      if (success) {
+      if (newName.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Nama berhasil diperbarui")),
+          const SnackBar(content: Text("Nama tidak boleh kosong")),
+        );
+        return;
+      }
+
+      try {
+        await authApi.updateProfile(name: newName);
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('name', newName);
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Profil berhasil diperbarui")),
         );
 
         setState(() {
           _profileFuture = authApi.getProfile();
         });
+
+        //Navigator.pop(context, newName);
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Gagal update profil: $e")));
       }
     }
   }
@@ -89,12 +112,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(
-      //   title: const Text("Profil Saya", style: TextStyle(color: Colors.white)),
-      //   backgroundColor: const Color(0xff2F59AB),
-      // ),
       body: FutureBuilder<ProfileModel>(
-        future: authApi.getProfile(),
+        future: _profileFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
