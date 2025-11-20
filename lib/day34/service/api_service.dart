@@ -233,11 +233,11 @@ class AuthAPI {
   //   return response.statusCode == 200;
   // }
 
-  Future<List<RiwayatAbsenModel>> getRiwayatAbsen(int days) async {
+  Future<List<RiwayatAbsenModel>> getRiwayatAbsen(String status) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token") ?? "";
 
-    final url = Uri.parse("$baseUrl/absen/history");
+    final url = Uri.parse("$baseUrl/absen/history?status=$status");
 
     final response = await http.get(
       url,

@@ -12,22 +12,31 @@ class RiwayatAbsenPage extends StatefulWidget {
 
 class _RiwayatAbsenPageState extends State<RiwayatAbsenPage> {
   late Future<List<RiwayatAbsenModel>> riwayatHadir;
+  late Future<List<RiwayatAbsenModel>> riwayatIzin;
 
   @override
   void initState() {
     super.initState();
 
-    // Ambil riwayat hadir, bisa kamu ubah ke 7 / 30 Hari sesuai kebutuhan
-    riwayatHadir = AuthAPI().getRiwayatAbsen(30);
+    riwayatHadir = AuthAPI()
+        .getRiwayatAbsen("all")
+        .then(
+          (list) => list
+              .where((e) => e.status == "hadir" || e.status == "masuk")
+              .toList(),
+        );
+
+    riwayatIzin = AuthAPI()
+        .getRiwayatAbsen("all")
+        .then((list) => list.where((e) => e.status == "izin").toList());
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        /// TAB BAR
         const TabBar(
-          labelColor: Colors.deepPurple,
+          labelColor: Color(0xff176B87),
           unselectedLabelColor: Colors.grey,
           tabs: [
             Tab(text: "Hadir"),
@@ -35,12 +44,11 @@ class _RiwayatAbsenPageState extends State<RiwayatAbsenPage> {
           ],
         ),
 
-        /// TAB VIEW
         Expanded(
           child: TabBarView(
             children: [
-              _buildRiwayatList(riwayatHadir), // Tab Hadir
-              _buildEmptyTab("Belum ada data izin"), // Tab Izin
+              _buildRiwayatList(riwayatHadir, "Belum ada riwayat hadir"),
+              _buildRiwayatList(riwayatIzin, "Belum ada riwayat izin"),
             ],
           ),
         ),
@@ -48,8 +56,11 @@ class _RiwayatAbsenPageState extends State<RiwayatAbsenPage> {
     );
   }
 
-  /// TAB RIWAYAT HADIR
-  Widget _buildRiwayatList(Future<List<RiwayatAbsenModel>> future) {
+  /// BUILDER LIST
+  Widget _buildRiwayatList(
+    Future<List<RiwayatAbsenModel>> future,
+    String emptyMessage,
+  ) {
     return FutureBuilder(
       future: future,
       builder: (context, snapshot) {
@@ -58,7 +69,7 @@ class _RiwayatAbsenPageState extends State<RiwayatAbsenPage> {
         }
 
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return _buildEmptyTab("Belum ada riwayat kehadiran");
+          return _buildEmptyTab(emptyMessage);
         }
 
         final data = snapshot.data!;
@@ -74,7 +85,7 @@ class _RiwayatAbsenPageState extends State<RiwayatAbsenPage> {
     );
   }
 
-  /// EMPTY PLACEHOLDER
+  /// EMPTY TAB
   Widget _buildEmptyTab(String message) {
     return Center(
       child: Column(
@@ -88,7 +99,7 @@ class _RiwayatAbsenPageState extends State<RiwayatAbsenPage> {
     );
   }
 
-  /// CARD ITEM RIWAYAT
+  /// LIST ITEM
   Widget _itemTile(RiwayatAbsenModel item) {
     final tanggal = DateFormat(
       'EEEE, dd MMMM yyyy',
@@ -96,6 +107,8 @@ class _RiwayatAbsenPageState extends State<RiwayatAbsenPage> {
     ).format(DateTime.parse(item.attendanceDate));
 
     return Card(
+      color: const Color(0xffB4D4FF),
+      shadowColor: const Color(0xff176B87),
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -108,24 +121,29 @@ class _RiwayatAbsenPageState extends State<RiwayatAbsenPage> {
               tanggal,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 6),
 
-            _rowInfo("Check In", item.checkInTime ?? "-"),
-            _rowInfo("Lokasi In", item.checkInAddress ?? "-"),
+            const SizedBox(height: 10),
 
-            const SizedBox(height: 6),
-
-            _rowInfo("Check Out", item.checkOutTime ?? "-"),
-            _rowInfo("Lokasi Out", item.checkOutAddress ?? "-"),
-
-            if (item.status == "izin") ...[
+            /// --- KHUSUS HADIR ---
+            if (item.status == "hadir" || item.status == "masuk") ...[
+              _rowInfo("Check In", item.checkInTime ?? "-"),
+              _rowInfo("Lokasi In", item.checkInAddress ?? "-"),
               const SizedBox(height: 8),
-              const Divider(),
+              _rowInfo("Check Out", item.checkOutTime ?? "-"),
+              _rowInfo("Lokasi Out", item.checkOutAddress ?? "-"),
+            ],
+
+            /// --- KHUSUS IZIN ---
+            if (item.status == "izin") ...[
+              _rowInfo("Waktu", item.checkInTime ?? "-"),
+              _rowInfo("Lokasi", item.checkInAddress ?? "-"),
+              const SizedBox(height: 8),
               Text(
-                "Izin: ${item.alasanIzin ?? '-'}",
+                "Alasan: ${item.alasanIzin ?? '-'}",
                 style: const TextStyle(
-                  color: Colors.orange,
                   fontStyle: FontStyle.italic,
+                  color: Colors.orange,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],

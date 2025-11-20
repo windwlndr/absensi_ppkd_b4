@@ -1,6 +1,9 @@
 import 'dart:io';
 import 'package:absensi_ppkd_b4/day34/models/profile_model.dart';
+import 'package:absensi_ppkd_b4/day34/preferences/preference_handler.dart';
 import 'package:absensi_ppkd_b4/day34/service/api_service.dart';
+import 'package:absensi_ppkd_b4/day34/views/login_screen.dart';
+import 'package:absensi_ppkd_b4/day34/widgets/copyright_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -42,11 +45,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text("Batal"),
+              child: const Text(
+                "Batal",
+                style: TextStyle(color: Color(0xff176B87)),
+              ),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text("Simpan"),
+              child: const Text(
+                "Simpan",
+                style: TextStyle(color: Color(0xff176B87)),
+              ),
             ),
           ],
         );
@@ -109,6 +118,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  //LOGOUT
+  Future<void> _handleLogout() async {
+    await SharedPrefHandler.logout();
+
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+        (route) => false, // Hapus semua riwayat navigasi
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -158,7 +180,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     )
                   : null,
               child: user.profilePhoto == null
-                  ? Icon(Icons.person, size: 60, color: Colors.blue.shade800)
+                  ? Icon(Icons.person, size: 60, color: Color(0xff176B87))
                   : null,
             ),
           ),
@@ -174,13 +196,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.blue.shade900,
+                  color: Color(0xff176B87),
                 ),
               ),
               const SizedBox(width: 6),
               IconButton(
                 onPressed: () => _editName(user),
-                icon: Icon(Icons.edit, color: Colors.blue.shade600),
+                icon: Icon(Icons.edit, color: Color(0xff176B87)),
               ),
             ],
           ),
@@ -210,11 +232,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           _infoCard(
             title: "Jenis Kelamin",
-            value: user.jenisKelamin ?? "-",
+            value: (user.jenisKelamin == "L")
+                ? "Laki-laki"
+                : (user.jenisKelamin == "P")
+                ? "Perempuan"
+                : "-",
             icon: Icons.person_outline,
           ),
 
-          const SizedBox(height: 40),
+          const SizedBox(height: 20),
+
+          SizedBox(
+            width: 100,
+            child: ElevatedButton(
+              onPressed: _handleLogout,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0XFF176B87),
+                padding: EdgeInsets.symmetric(vertical: 14),
+              ),
+              child: const Text(
+                "Logout",
+                style: TextStyle(fontSize: 16, color: Colors.white),
+              ),
+            ),
+          ),
+          SizedBox(height: 28),
+          CopyrightWidget(
+            companyName: 'Created by Windu Wulandari',
+            startYear: 2025,
+            textStyle: TextStyle(color: Colors.black),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
@@ -230,7 +278,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ListTile(
-        leading: Icon(icon, color: Colors.blue.shade700),
+        leading: Icon(icon, color: Color(0xff176B87)),
         title: Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(value),
       ),

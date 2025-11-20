@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:absensi_ppkd_b4/day34/views/profil_user.dart';
 import 'package:absensi_ppkd_b4/day34/views/riwayat_absen.dart';
+import 'package:absensi_ppkd_b4/day34/widgets/copyright_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -28,10 +29,12 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
   String? checkInTime;
   String? checkOutTime;
   LatLng? currentPosition;
-  String? currentAddress = "Mendeteksi lokasi...";
+  String currentAddress = "Mendeteksi lokasi...";
   bool isIzin = false;
   String? izinTime;
   String? izinAlasan;
+  bool hasCheckedIn = false;
+  bool hasTakenIzin = false;
 
   String today = DateFormat(
     "EEEE, dd MMMM yyyy",
@@ -46,6 +49,8 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
     startRealtimeLocation();
     loadCheckHistory();
     loadIzinStatus();
+    hasCheckedIn = checkInTime != null;
+    hasTakenIzin = isIzin;
   }
 
   @override
@@ -356,41 +361,63 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
             Text(today, style: const TextStyle(color: Colors.black54)),
             const SizedBox(height: 20),
 
-            // GOOGLE MAPS REALTIME
-            SizedBox(
-              height: 300,
-              child: currentLatLng == null
-                  ? const Center(child: CircularProgressIndicator())
-                  : GoogleMap(
-                      initialCameraPosition: CameraPosition(
-                        target: currentLatLng!,
-                        zoom: 17,
-                      ),
-                      markers: {
-                        Marker(
-                          markerId: const MarkerId("me"),
-                          position: currentLatLng!,
-                          infoWindow: const InfoWindow(title: "Lokasi Anda"),
+            // GOOGLE MAPS
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 300,
+                  decoration: BoxDecoration(
+                    color: Color(0xff176B87),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  padding: EdgeInsets.all(8),
+                  child: currentLatLng == null
+                      ? const Center(child: CircularProgressIndicator())
+                      : GoogleMap(
+                          initialCameraPosition: CameraPosition(
+                            target: currentLatLng!,
+                            zoom: 17,
+                          ),
+                          markers: {
+                            Marker(
+                              markerId: const MarkerId("me"),
+                              position: currentLatLng!,
+                              infoWindow: const InfoWindow(
+                                title: "Lokasi Anda",
+                              ),
+                            ),
+                          },
+                          onMapCreated: (c) => mapController = c,
+                          myLocationEnabled: true,
+                          myLocationButtonEnabled: false,
                         ),
-                      },
-                      onMapCreated: (c) => mapController = c,
-                      myLocationEnabled: true,
-                      myLocationButtonEnabled: false,
+                ),
+
+                // Refresh Button
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.location_on),
+                    SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        "Lokasi Anda saat ini: $currentAddress",
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 3,
+                        softWrap: true,
+                      ),
                     ),
-            ),
-
-            const SizedBox(height: 10),
-
-            // Refresh Button
-            Align(
-              alignment: Alignment.centerRight,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  _initLocation();
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text("Refresh Lokasi"),
-              ),
+                    SizedBox(width: 6),
+                    IconButton(
+                      onPressed: () {
+                        _initLocation();
+                      },
+                      icon: Icon(Icons.refresh),
+                    ),
+                  ],
+                ),
+              ],
             ),
 
             const SizedBox(height: 20),
@@ -399,26 +426,32 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // BUTTON MASUK
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: isIzin || checkInTime != null
+                    onPressed: (hasCheckedIn || hasTakenIzin)
                         ? null
                         : handleCheckIn,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text("Masuk"),
+                    child: const Text(
+                      "Masuk",
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ),
+
                 const SizedBox(width: 12),
 
+                // BUTTON PULANG
                 Expanded(
                   child: ElevatedButton(
                     onPressed:
-                        isIzin || checkInTime == null || checkOutTime != null
-                        ? null
-                        : handleCheckOut,
+                        (hasCheckedIn && !hasTakenIzin && checkOutTime == null)
+                        ? handleCheckOut
+                        : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -426,17 +459,23 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
                     child: const Text("Pulang"),
                   ),
                 ),
+
                 const SizedBox(width: 12),
 
+                // BUTTON IZIN
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: isIzin ? null : showIzinDialog,
-
+                    onPressed: (!hasCheckedIn && !hasTakenIzin)
+                        ? showIzinDialog
+                        : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: Color(0xff86B6F6),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text("Izin"),
+                    child: const Text(
+                      "Izin",
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ),
               ],
@@ -445,6 +484,8 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
             //RIWAYAT ABSEN HARI INI
             const SizedBox(height: 10),
             Card(
+              color: Color(0xffEEF5FF),
+              shadowColor: Color(0xff176B87),
               elevation: 3,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -486,22 +527,35 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
             ),
 
             Card(
+              color: Color(0xffB4D4FF),
+              shadowColor: Color(0xff176B87),
               child: ListTile(
                 title: const Text("Hadir Bulan Ini"),
                 trailing: const Text("18 Hari"),
               ),
             ),
             Card(
+              color: Color(0xffB4D4FF),
+              shadowColor: Color(0xff176B87),
               child: ListTile(
                 title: const Text("Izin"),
                 trailing: const Text("1 Hari"),
               ),
             ),
             Card(
+              color: Color(0xffB4D4FF),
+              shadowColor: Color(0xff176B87),
               child: ListTile(
                 title: const Text("Sakit"),
                 trailing: const Text("0 Hari"),
               ),
+            ),
+            const SizedBox(height: 20),
+            CopyrightWidget(
+              companyName: 'Created by Windu Wulandari',
+              startYear: 2025,
+              textStyle: TextStyle(color: Colors.black),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -539,12 +593,13 @@ class _DashboardPageDay34State extends State<DashboardPageDay34> {
           getAppBarTitle(),
           style: const TextStyle(color: Colors.white),
         ),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Color(0xff176B87),
       ),
       body: DefaultTabController(length: 2, child: getSelectedPage()),
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Color(0xffEEF5FF),
         currentIndex: currentIndex,
-        selectedItemColor: Colors.deepPurple,
+        selectedItemColor: Color(0xff176B87),
         unselectedItemColor: Colors.black54,
         onTap: (i) {
           setState(() => currentIndex = i);

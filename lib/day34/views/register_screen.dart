@@ -3,6 +3,7 @@ import 'package:absensi_ppkd_b4/day34/models/batch_model.dart';
 import 'package:absensi_ppkd_b4/day34/models/list_trainings.dart';
 import 'package:absensi_ppkd_b4/day34/service/api_service.dart';
 import 'package:absensi_ppkd_b4/day34/views/login_screen.dart';
+import 'package:absensi_ppkd_b4/day34/widgets/copyright_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -120,7 +121,7 @@ class _RegisterPageState extends State<RegisterPage> {
         height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF4F46E5), Color(0xFF7C3AED), Color(0xFF312E81)],
+            colors: [Color(0xFF176B87), Color(0xFF86B6F6), Color(0xFFB4D4FF)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -137,7 +138,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     children: const [
                       SizedBox(height: 10),
                       Text(
-                        "Aplikasi Absensi",
+                        "Absensi Si",
                         style: TextStyle(
                           fontSize: 22,
                           color: Colors.white,
@@ -353,7 +354,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             height: 52,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF4F46E5),
+                                backgroundColor: const Color(0xFF176B87),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -388,7 +389,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 child: const Text(
                                   "Login di sini",
                                   style: TextStyle(
-                                    color: Color(0xFF4F46E5),
+                                    color: Color(0xFF176B87),
                                     decoration: TextDecoration.underline,
                                   ),
                                 ),
@@ -402,11 +403,18 @@ class _RegisterPageState extends State<RegisterPage> {
 
                   const SizedBox(height: 20),
 
-                  const Text(
-                    "Dengan mendaftar, Anda menyetujui syarat & ketentuan kami",
-                    style: TextStyle(color: Color(0xFFE0E7FF), fontSize: 12),
+                  CopyrightWidget(
+                    companyName: 'Created by Windu Wulandari',
+                    startYear: 2025,
+                    textStyle: TextStyle(color: Colors.black),
                     textAlign: TextAlign.center,
                   ),
+
+                  // const Text(
+                  //   "Dengan mendaftar, Anda menyetujui syarat & ketentuan kami",
+                  //   style: TextStyle(color: Color(0xFFE0E7FF), fontSize: 12),
+                  //   textAlign: TextAlign.center,
+                  // ),
                 ],
               ),
             ),
