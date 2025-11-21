@@ -68,7 +68,7 @@ class _LoginPageState extends State<LoginPage> {
                     radius: 35,
                     backgroundColor: Colors.transparent,
                     backgroundImage: AssetImage(
-                      "assets/images/Logo_Absen_Si.png",
+                      "assets/images/Absen_Si_Logo.png",
                     ),
                   ),
                   const SizedBox(height: 14),
